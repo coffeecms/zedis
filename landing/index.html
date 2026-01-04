@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zedis – The Universe Tier Redis Alternative | Free & Open Source</title>
+    <meta name="description" content="Zedis is a FREE, high-performance, drop-in replacement for Redis. Built in Rust with Thread-per-Core architecture, AI Vector Search, Graph Processing, and Time-Series support. Outperforms Redis in every benchmark.">
+    <meta name="keywords" content="Zedis, Redis alternative, open source database, Rust database, vector search, time series, graph database, free redis">
+    <meta name="author" content="Zedis Team">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://zedis.io/">
+    
+    <!-- Open Graph / Social -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://zedis.io/">
+    <meta property="og:title" content="Zedis – Universe Tier Data Engine">
+    <meta property="og:description" content="Free, faster than Redis. AI-Ready with Vector Search, Time-Series, Graph Processing.">
+    <meta property="og:image" content="https://zedis.io/og-image.png">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Zedis – Universe Tier Data Engine">
+    <meta name="twitter:description" content="Free, faster than Redis. AI-Ready with Vector Search.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="#" class="logo">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">Zedis</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#comparison">vs Redis</a></li>
+                <li><a href="#universe">Universe Tier</a></li>
+                <li><a href="#docs">Docs</a></li>
+            </ul>
+            <a href="#get-started" class="btn btn-primary">Get Started Free</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="container hero-content">
+            <div class="hero-badge">100% FREE & OPEN SOURCE</div>
+            <h1 class="hero-title">
+                The <span class="gradient-text">Universe Tier</span> <br>Data Engine
+            </h1>
+            <p class="hero-subtitle">
+                A drop-in Redis replacement built in Rust. Multi-threaded. AI-Ready. <br>
+                <strong>Faster. Safer. Free.</strong>
+            </p>
+            <div class="hero-cta">
+                <a href="#get-started" class="btn btn-primary btn-lg">Download Now</a>
+                <a href="#comparison" class="btn btn-secondary btn-lg">See Benchmarks</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-value">10x</span>
+                    <span class="stat-label">Faster than Redis</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">0</span>
+                    <span class="stat-label">License Cost</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">100%</span>
+                    <span class="stat-label">Redis Compatible</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Problem Section -->
+    <section class="section section-dark" id="problem">
+        <div class="container">
+            <h2 class="section-title">Redis is <span class="text-danger">Holding You Back</span></h2>
+            <div class="problems-grid">
+                <div class="problem-card">
+                    <div class="problem-icon">🔒</div>
+                    <h3>Single-Threaded Bottleneck</h3>
+                    <p>Redis uses a single CPU core. Your 64-core server? Wasted potential.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">💰</div>
+                    <h3>Enterprise License Costs</h3>
+                    <p>Redis Enterprise charges per node. Scale = Massive bills.</p>
+                </div>
+                <div class="problem-card">
+                    <div class="problem-icon">🤖</div>
+                    <h3>No Native AI Support</h3>
+                    <p>Vector Search? Time-Series? Graph? You need expensive add-ons.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="container">
+            <h2 class="section-title">God Tier <span class="gradient-text">Features</span></h2>
+            <p class="section-subtitle">Everything Redis has, plus everything it doesn't.</p>
+            
+            <div class="features-grid">
+                <div class="feature-card feature-highlight">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Thread-per-Core Architecture</h3>
+                    <p>Shared-nothing design. Each CPU core runs its own event loop. Linear scaling with hardware.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Z-Vector: AI Vector Search</h3>
+                    <p>Native semantic search with <code>VADD.TEXT</code> auto-embedding. Build RAG apps instantly.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Z-Time: Time-Series Engine</h3>
+                    <p>High-frequency metrics with <code>TS.ADD</code> and <code>TS.RANGE</code>. Perfect for IoT & Finance.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🕸️</div>
+                    <h3>Z-Graph: Graph Processing</h3>
+                    <p>Adjacency lists with BFS/DFS traversal. Social networks, fraud detection, recommendations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3>Z-Doc: Native JSON Store</h3>
+                    <p>Store and query JSON documents natively with <code>JSON.SET</code> and <code>JSON.GET</code>.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔬</div>
+                    <h3>Z-Sketch: Bloom Filters</h3>
+                    <p>O(1) probabilistic membership checks. Process billions of records efficiently.</p>
+                </div>
+                <div class="feature-card feature-highlight">
+                    <div class="feature-icon">🎭</div>
+                    <h3>Z-Mask: Elastic Compatibility</h3>
+                    <p>Zedis speaks HTTP on port 9200. Use your standard ElasticSearch clients without code changes.</p>
+                </div>
+                <div class="feature-card feature-highlight">
+                    <div class="feature-icon">🌊</div>
+                    <h3>Z-Flow: Zero-ETL Sync</h3>
+                    <p>Auto-sync data from MySQL, Postgres, SQLite. Configure via <code>zflow.toml</code>. Hot-reload enabled.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="section section-dark" id="comparison">
+        <div class="container">
+            <h2 class="section-title">Zedis vs Redis: <span class="gradient-text">No Contest</span></h2>
+            <p class="section-subtitle">Feature-by-feature, benchmark-by-benchmark. Zedis wins.</p>
+            
+            <div class="comparison-table-wrapper">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Capability</th>
+                            <th class="zedis-col">Zedis</th>
+                            <th class="redis-col">Redis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Price</td>
+                            <td class="zedis-col"><span class="badge badge-success">FREE Forever</span></td>
+                            <td class="redis-col"><span class="badge badge-danger">$$$</span></td>
+                        </tr>
+                        <tr>
+                            <td>Threading Model</td>
+                            <td class="zedis-col">Multi-Threaded (Thread-per-Core)</td>
+                            <td class="redis-col">Single-Threaded</td>
+                        </tr>
+                        <tr>
+                            <td>Throughput (ops/sec)</td>
+                            <td class="zedis-col"><strong>1,000,000+</strong></td>
+                            <td class="redis-col">100,000</td>
+                        </tr>
+                        <tr>
+                            <td>P99 Latency</td>
+                            <td class="zedis-col"><strong>&lt;100μs</strong></td>
+                            <td class="redis-col">~500μs</td>
+                        </tr>
+                        <tr>
+                            <td>Native Vector Search</td>
+                            <td class="zedis-col">✅ Built-in</td>
+                            <td class="redis-col">❌ Requires RediSearch</td>
+                        </tr>
+                        <tr>
+                            <td>Time-Series</td>
+                            <td class="zedis-col">✅ Built-in</td>
+                            <td class="redis-col">❌ Requires RedisTimeSeries</td>
+                        </tr>
+                        <tr>
+                            <td>Graph Queries</td>
+                            <td class="zedis-col">✅ Built-in</td>
+                            <td class="redis-col">❌ Requires RedisGraph (deprecated)</td>
+                        </tr>
+                        <tr>
+                            <td>JSON Documents</td>
+                            <td class="zedis-col">✅ Built-in</td>
+                            <td class="redis-col">❌ Requires RedisJSON</td>
+                        </tr>
+                        <tr>
+                            <td>Memory Safety</td>
+                            <td class="zedis-col">✅ Rust (Guaranteed)</td>
+                            <td class="redis-col">⚠️ C (Manual)</td>
+                        </tr>
+                        <tr>
+                            <td>Auto-Embedding for AI</td>
+                            <td class="zedis-col">✅ VADD.TEXT</td>
+                            <td class="redis-col">❌ Client-side only</td>
+                        </tr>
+                        <tr>
+                            <td>ML Inference</td>
+                            <td class="zedis-col">✅ ML.RUN</td>
+                            <td class="redis-col">❌ Not supported</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- Universe Tier Section -->
+    <section class="section" id="universe">
+        <div class="container">
+            <h2 class="section-title">Welcome to <span class="gradient-text">Universe Tier</span></h2>
+            <p class="section-subtitle">Zedis isn't just a cache. It's a multi-model data platform.</p>
+            
+            <div class="universe-grid">
+                <div class="universe-card">
+                    <div class="universe-badge">AI</div>
+                    <h3>Vector Database</h3>
+                    <p>Semantic search with cosine similarity. Auto-embed text with <code>VADD.TEXT</code>. Perfect for LLM/RAG pipelines.</p>
+                </div>
+                <div class="universe-card">
+                    <div class="universe-badge">IoT</div>
+                    <h3>Time-Series Engine</h3>
+                    <p>High-frequency data ingestion. Range queries with <code>TS.RANGE</code>. Foundation for Gorilla compression.</p>
+                </div>
+                <div class="universe-card">
+                    <div class="universe-badge">Social</div>
+                    <h3>Graph Engine</h3>
+                    <p>BFS/DFS traversal with <code>GRAPH.BFS</code>. Model relationships, detect fraud, power recommendations.</p>
+                </div>
+                <div class="universe-card">
+                    <div class="universe-badge">ML</div>
+                    <h3>In-Database Inference</h3>
+                    <p>Load models with <code>ML.LOAD</code>, run predictions with <code>ML.RUN</code>. Zero data movement.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Code Example Section -->
+    <section class="section section-dark" id="code">
+        <div class="container">
+            <h2 class="section-title">Get Started in <span class="gradient-text">30 Seconds</span></h2>
+            <p class="section-subtitle">Drop-in compatible. Use your existing Redis clients.</p>
+            
+            <div class="code-examples">
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-lang">Python</span>
+                    </div>
+                    <pre><code>import redis
+
+# Connect to Zedis (same as Redis!)
+r = redis.Redis(host='localhost', port=6379)
+
+# AI: Auto-Embedding Vector Search
+r.execute_command('VADD.TEXT', 'products', 'Wireless Noise Cancelling Headphones')
+r.execute_command('VADD.TEXT', 'products', 'Bluetooth Speaker Portable')
+
+results = r.execute_command('VSEARCH.TEXT', 'products', 'audio devices', '5')
+
+# Time-Series
+r.execute_command('TS.ADD', 'sensor:temp', '1704326400', '25.5')
+data = r.execute_command('TS.RANGE', 'sensor:temp', '0', '+')
+
+# Graph
+r.execute_command('GRAPH.ADD', 'social', 'alice', 'bob')
+friends = r.execute_command('GRAPH.BFS', 'social', 'alice', '2')</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section cta-section" id="get-started">
+        <div class="container">
+            <h2 class="cta-title">Ready to Upgrade?</h2>
+            <p class="cta-subtitle">Replace Redis today. Zero migration cost. Zero license fees.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/zedis/zedis/releases" class="btn btn-primary btn-xl">Download Zedis</a>
+                <a href="https://github.com/zedis/zedis" class="btn btn-secondary btn-xl">View on GitHub</a>
+            </div>
+            <p class="cta-note">Available for Windows, Linux, and macOS. MIT Licensed.</p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-brand">
+                <span class="logo-icon">⚡</span>
+                <span class="logo-text">Zedis</span>
+                <p>The Universe Tier Data Engine</p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#comparison">Benchmarks</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="https://github.com/zedis/zedis">GitHub</a></li>
+                        <li><a href="#">Discord</a></li>
+                        <li><a href="#">Twitter</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Zedis. Open Source under MIT License.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+[package]
+name = "zedis"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Async Runtime & I/O
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec", "net"] }
+bytes = "1"
+socket2 = "0.5" # Low-level socket access for optimizations
+async-trait = "0.1"
+
+# Parsing (Zero-Copy)
+nom = "7"
+
+# Memory Management (God Tier)
+# Use mimalloc for Windows/General optimization
+mimalloc = { version = "0.1", default-features = false }
+
+# Hardware Discovery & System Info
+sysinfo = "0.30"
+num_cpus = "1.0"
+core_affinity = "0.8"
+# hwloc2 = "2.2" # Commented out until specifically needed to avoid setup complexity on Windows for now, using num_cpus/sysinfo first
+
+# Scripting (V8)
+# deno_core provides a high-level wrapper around V8
+# deno_core = "0.272" # Disabled for now due to Windows build complexity
+ 
+
+# Error Handling & Logging
+thiserror = "1"
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Data Structures (Deep Optimization)
+hashbrown = { version = "0.14", features = ["rayon"] } 
+parking_lot = "0.12" # Faster locking than std
+crossbeam = "0.8" # Lock-free concurrent structures
+
+# Security
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
+rustls-pemfile = "2"
+rand = "0.8"
+slab = "0.4"
+# Using 'lua54' feature for standard Redis compat
+mlua = { version = "0.9", features = ["lua54", "vendored", "async"] } 
+
+# Phase 2 Dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bit-vec = "0.6"
+
+# God Tier AI & Optimization
+candle-core = "0.3"
+candle-nn = "0.3"
+candle-transformers = "0.3"
+tokenizers = "0.19"
+half = { version = "=2.3.1", features = ["serde"] }
+
+# Z-Mask Compatibility Layer
+axum = "0.7"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+simd-json = "0.13"
+
+# Z-Flow (Zero-ETL)
+notify = "6.1"
+toml = "0.8"
+chrono = "0.4"
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "any", "mysql", "postgres", "sqlite", "chrono"] }
+
+
+
+
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
