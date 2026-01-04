@@ -1,0 +1,2 @@
+# zedis
+The Redis Alternative
