@@ -1,6 +1,7 @@
 use crate::core::protocol::RespFrame;
-use crate::core::storage::Db;
+use crate::core::storage::{Db, BitfieldOp, BitType, BitOverflow};
 use crate::security::acl::AclEngine;
+
 use crate::persistence::AofManager;
 use std::sync::Arc;
 use anyhow::Result;
@@ -16,6 +17,7 @@ pub struct Dispatcher {
     shadow_addr: Option<String>,
     script_engine: ScriptEngine,
     bge_model: Option<Arc<BgeM3>>,
+    pubsub_tx: tokio::sync::broadcast::Sender<String>,
 }
 
 
@@ -28,6 +30,7 @@ impl Dispatcher {
             shadow_addr,
             script_engine: ScriptEngine::new(),
             bge_model,
+            pubsub_tx: { let (tx, _) = tokio::sync::broadcast::channel(1000); tx },
         }
 
     }
@@ -112,6 +115,20 @@ use crate::persistence::Persistence;
                         }
                     }
                     "PING" => Ok(RespFrame::SimpleString("PONG".to_string())),
+                    "PFADD" => self.handle_pfadd(&frames).await,
+                    "PFCOUNT" => self.handle_pfcount(&frames).await,
+                    "CF.ADD" => self.handle_cfadd(&frames).await,
+                    "CF.EXISTS" => self.handle_cfexists(&frames).await,
+                    "CMS.INCRBY" => self.handle_cms_incr(&frames).await,
+                    "CMS.QUERY" => self.handle_cms_query(&frames).await,
+                    "TOPK.ADD" => self.handle_topk_add(&frames).await,
+                    "TOPK.LIST" => self.handle_topk_list(&frames).await,
+                    "TDIGEST.ADD" => self.handle_tdigest_add(&frames).await,
+                    "TDIGEST.QUANTILE" => self.handle_tdigest_quantile(&frames).await,
+                    "PUBLISH" => self.handle_publish(&frames).await,
+                    "BITFIELD" => self.handle_bitfield(&frames).await,
+                    // SUBSCRIBE is handled via special control flow in server.rs calling handle_subscribe directly
+
                     _ => Ok(RespFrame::Error(format!("ERR unknown command '{}'", cmd_name))),
                 }
             }
@@ -407,6 +424,113 @@ use crate::persistence::Persistence;
         Ok(RespFrame::Integer(count as i64))
     }
 
+    async fn handle_bitfield(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() < 2 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+
+         let mut ops = Vec::new();
+         let mut overflows = Vec::new();
+         let mut cur_overflow = BitOverflow::Wrap;
+
+         let mut i = 2;
+         while i < frames.len() {
+             let op_str = match &frames[i] { RespFrame::BulkString(Some(s)) => s.to_uppercase(), _ => break };
+             i += 1;
+
+             match op_str.as_str() {
+                 "OVERFLOW" => {
+                     if i >= frames.len() { return Ok(RespFrame::Error("ERR syntax".to_string())); }
+                     let strat = match &frames[i] { RespFrame::BulkString(Some(s)) => s.to_uppercase(), _ => return Ok(RespFrame::Error("ERR overflow".to_string())) };
+                     cur_overflow = match strat.as_str() {
+                         "WRAP" => BitOverflow::Wrap,
+                         "SAT" => BitOverflow::Sat,
+                         "FAIL" => BitOverflow::Fail,
+                         _ => return Ok(RespFrame::Error("ERR overflow type".to_string())),
+                     };
+                     i += 1;
+                     // Push overflow state for subsequent commands? 
+                     // Or just track current. Storage expects a list matching ops or we handle it here?
+                     // Storage expects a list `overflow: Vec<BitOverflow>`. logic there is `overflow[ov_idx]`
+                     // We should push `cur_overflow` for EACH Op we add.
+                 },
+                 "GET" => {
+                     // GET type offset
+                     if i + 1 >= frames.len() { return Ok(RespFrame::Error("ERR syntax".to_string())); }
+                     let type_str = match &frames[i] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR type".to_string())) };
+                     let off_str = match &frames[i+1] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR offset".to_string())) };
+                     i += 2;
+
+                     let (typ, width) = Self::parse_bittype(type_str)?;
+                     let offset = Self::parse_bitoffset(off_str, width)?;
+                     
+                     ops.push(BitfieldOp::Get(typ, offset));
+                     overflows.push(cur_overflow);
+                 },
+                 "SET" => {
+                     // SET type offset value
+                     if i + 2 >= frames.len() { return Ok(RespFrame::Error("ERR syntax".to_string())); }
+                     let type_str = match &frames[i] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR type".to_string())) };
+                     let off_str = match &frames[i+1] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR offset".to_string())) };
+                     let val_str = match &frames[i+2] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR value".to_string())) };
+                     i += 3;
+
+                     let (typ, width) = Self::parse_bittype(type_str)?;
+                     let offset = Self::parse_bitoffset(off_str, width)?;
+                     let val = val_str.parse::<i64>().map_err(|_| anyhow::anyhow!("ERR value"))?;
+
+                     ops.push(BitfieldOp::Set(typ, offset, val));
+                     overflows.push(cur_overflow);
+                 },
+                 "INCRBY" => {
+                     // INCRBY type offset increment
+                     if i + 2 >= frames.len() { return Ok(RespFrame::Error("ERR syntax".to_string())); }
+                     let type_str = match &frames[i] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR type".to_string())) };
+                     let off_str = match &frames[i+1] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR offset".to_string())) };
+                     let incr_str = match &frames[i+2] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR incr".to_string())) };
+                     i += 3;
+
+                     let (typ, width) = Self::parse_bittype(type_str)?;
+                     let offset = Self::parse_bitoffset(off_str, width)?;
+                     let incr = incr_str.parse::<i64>().map_err(|_| anyhow::anyhow!("ERR incr"))?;
+
+                     ops.push(BitfieldOp::IncrBy(typ, offset, incr));
+                     overflows.push(cur_overflow);
+                 },
+                 _ => return Ok(RespFrame::Error(format!("ERR unknown subcommand '{}'", op_str))),
+             }
+         }
+
+         let results = self.db.bitfield(key, ops, overflows);
+         
+         let resp_arr = results.into_iter().map(|v| {
+             match v {
+                 Some(n) => RespFrame::Integer(n),
+                 None => RespFrame::Null, 
+             }
+         }).collect();
+         Ok(RespFrame::Array(Some(resp_arr)))
+    }
+
+    fn parse_bittype(s: &str) -> anyhow::Result<(BitType, u8)> {
+        if s.len() < 2 { return Err(anyhow::anyhow!("ERR invalid type")); }
+        let width = s[1..].parse::<u8>().map_err(|_| anyhow::anyhow!("ERR invalid width"))?;
+        match s.chars().next() {
+            Some('i') => Ok((BitType::Signed(width), width)),
+            Some('u') => Ok((BitType::Unsigned(width), width)),
+            _ => Err(anyhow::anyhow!("ERR invalid type char")),
+        }
+    }
+
+    fn parse_bitoffset(s: &str, width: u8) -> anyhow::Result<usize> {
+        if s.starts_with('#') {
+            let idx = s[1..].parse::<usize>().map_err(|_| anyhow::anyhow!("ERR invalid offset"))?;
+            Ok(idx * width as usize)
+        } else {
+            s.parse::<usize>().map_err(|_| anyhow::anyhow!("ERR invalid offset"))
+        }
+    }
+
+
     async fn handle_geoadd(&self, frames: &[RespFrame]) -> Result<RespFrame> {
          // GEOADD key lon lat member [lon lat member ...]
         if frames.len() < 5 || (frames.len() - 2) % 3 != 0 {
@@ -501,7 +625,7 @@ use crate::persistence::Persistence;
     }
 
     async fn handle_eval(&self, frames: &[RespFrame]) -> Result<RespFrame> {
-        if frames.len() < 2 {
+        if frames.len() < 3 {
              return Ok(RespFrame::Error("ERR wrong number of arguments for 'eval' command".to_string()));
         }
         let script = match &frames[1] {
@@ -509,11 +633,37 @@ use crate::persistence::Persistence;
              _ => return Ok(RespFrame::Error("ERR invalid script".to_string())),
         };
         
-        match self.script_engine.eval(&script, vec![], vec![]) {
+        let numkeys = match &frames[2] {
+             RespFrame::BulkString(Some(s)) => s.parse::<usize>().unwrap_or(0),
+             _ => 0, // Default 0 if parse fail or careful? Redis errors on invalid int.
+        };
+
+        let mut keys = Vec::new();
+        let mut args = Vec::new();
+        
+        // Parse keys
+        for i in 0..numkeys {
+             let idx = 3 + i;
+             if idx < frames.len() {
+                 if let RespFrame::BulkString(Some(s)) = &frames[idx] {
+                     keys.push(s.to_string());
+                 }
+             }
+        }
+
+        // Parse args
+        for i in (3 + numkeys)..frames.len() {
+             if let RespFrame::BulkString(Some(s)) = &frames[i] {
+                 args.push(s.to_string());
+             }
+        }
+        
+        match self.script_engine.eval(&script, keys, args, self.db.clone(), self.aof.clone()) {
              Ok(res) => Ok(RespFrame::BulkString(Some(res))),
              Err(e) => Ok(RespFrame::Error(format!("ERR script error: {}", e))),
         }
     }
+
 
     async fn handle_sadd(&self, frames: &[RespFrame]) -> Result<RespFrame> {
         if frames.len() < 3 {
@@ -792,5 +942,193 @@ use crate::persistence::Persistence;
         } else {
              Ok(RespFrame::Error("ERR BGE-M3 model not loaded".to_string()))
         }
+    }
+    /// BATCH EXECUTE (for Transactions)
+    pub async fn execute_transaction(&self, frames: Vec<RespFrame>) -> Result<RespFrame> {
+        let mut results = Vec::new();
+        // Execute sequentially. Note: No global lock, so not fully ACID across shards in this MVP.
+        // But atomic relative to the connection execution.
+        for frame in frames {
+             let res = self.execute(frame).await?;
+             results.push(res);
+        }
+        Ok(RespFrame::Array(Some(results)))
+    }
+
+    /// PUB/SUB Handlers
+    pub async fn handle_publish(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+        if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+        let channel = match &frames[1] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR channel".to_string())) };
+        let message = match &frames[2] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR message".to_string())) };
+        
+        let payload = format!("{} {}", channel, message); // Format: "channel message"
+        // Broadcast
+        let subs = self.pubsub_tx.send(payload).unwrap_or(0);
+        Ok(RespFrame::Integer(subs as i64))
+    }
+
+    pub async fn handle_subscribe(&self, frames: &[RespFrame], conn: &mut crate::io::connection::Connection) -> Result<()> {
+         if frames.len() < 2 { 
+             conn.write_frame(&RespFrame::Error("ERR args".to_string())).await?;
+             return Ok(()); 
+         }
+         
+         let mut channels = Vec::new();
+         for i in 1..frames.len() {
+             if let RespFrame::BulkString(Some(s)) = &frames[i] {
+                 channels.push(s.to_string());
+             }
+         }
+         
+         // subscribe confirmation
+         for (i, c) in channels.iter().enumerate() {
+             // array: ["subscribe", channel, count]
+             let resp = RespFrame::Array(Some(vec![
+                 RespFrame::BulkString(Some("subscribe".to_string())),
+                 RespFrame::BulkString(Some(c.clone())),
+                 RespFrame::Integer((i+1) as i64)
+             ]));
+             conn.write_frame(&resp).await?;
+         }
+
+         let mut rx = self.pubsub_tx.subscribe();
+         
+         loop {
+             tokio::select! {
+                 msg_res = rx.recv() => {
+                     match msg_res {
+                         Ok(msg) => {
+                             // msg format "channel message"
+                             if let Some((chan, payload)) = msg.split_once(' ') {
+                                 if channels.contains(&chan.to_string()) {
+                                     let push = RespFrame::Array(Some(vec![
+                                         RespFrame::BulkString(Some("message".to_string())),
+                                         RespFrame::BulkString(Some(chan.to_string())),
+                                         RespFrame::BulkString(Some(payload.to_string())),
+                                     ]));
+                                     conn.write_frame(&push).await?;
+                                 }
+                             }
+                         }
+                         Err(_) => break, // Lagged or closed
+                     }
+                 }
+                 // Check if client disconnected or sent unsubscribe? 
+                 // We need to read from conn simultaneously.
+                 input = conn.read_frame() => {
+                     match input {
+                         Ok(Some(frame)) => {
+                              // If UNSUBSCRIBE ... complex logic to remove from filtering
+                              // For MVP, any command breaks out or we implement proper "PubSub Mode" state machine
+                              // Let's assume if we get input, we check if it is unsubscribe.
+                              // If not, we might error or ignore. 
+                              // Current implementation: any client input breaks the loop to be safe/simple
+                              break;
+                         }
+                         _ => break, // Disconnect
+                     }
+                 }
+             }
+         }
+         Ok(())
+    }
+
+    // --- PROBABILISTIC HANDLERS ---
+
+    async fn handle_pfadd(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+        if frames.len() < 2 { return Ok(RespFrame::Error("ERR args".to_string())); }
+        let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+        
+        let mut updated = 0;
+        for i in 2..frames.len() {
+             let elm = match &frames[i] { RespFrame::BulkString(Some(s)) => s.to_string(), _ => continue };
+             if self.db.pf_add(key.clone(), elm) { updated = 1; }
+        }
+        Ok(RespFrame::Integer(updated))
+    }
+
+    async fn handle_pfcount(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+        if frames.len() != 2 { return Ok(RespFrame::Error("ERR args".to_string())); }
+        let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k, _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+        let count = self.db.pf_count(key);
+        Ok(RespFrame::Integer(count as i64))
+    }
+
+    async fn handle_cfadd(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let item = match &frames[2] { RespFrame::BulkString(Some(s)) => s.to_string(), _ => return Ok(RespFrame::Error("ERR item".to_string())) };
+         
+         let ok = self.db.cf_add(key, item);
+         Ok(RespFrame::Integer(if ok { 1 } else { 0 }))
+    }
+
+    async fn handle_cfexists(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k, _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let item = match &frames[2] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR item".to_string())) };
+         
+         let exists = self.db.cf_exists(key, item);
+         Ok(RespFrame::Integer(if exists { 1 } else { 0 }))
+    }
+
+    async fn handle_cms_incr(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 4 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let item = match &frames[2] { RespFrame::BulkString(Some(s)) => s.to_string(), _ => return Ok(RespFrame::Error("ERR item".to_string())) };
+         let incr = match &frames[3] { RespFrame::BulkString(Some(s)) => s.parse::<usize>().unwrap_or(1), _ => 1 };
+
+         self.db.cms_incr(key, item, incr);
+         Ok(RespFrame::SimpleString("OK".to_string()))
+    }
+
+    async fn handle_cms_query(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k, _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let item = match &frames[2] { RespFrame::BulkString(Some(s)) => s, _ => return Ok(RespFrame::Error("ERR item".to_string())) };
+         
+         let count = self.db.cms_query(key, item);
+         Ok(RespFrame::Integer(count as i64))
+    }
+
+    async fn handle_topk_add(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() < 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         
+         for i in 2..frames.len() {
+              let item = match &frames[i] { RespFrame::BulkString(Some(s)) => s.to_string(), _ => continue };
+              self.db.topk_add(key.clone(), item);
+         }
+         Ok(RespFrame::SimpleString("OK".to_string()))
+    }
+
+    async fn handle_topk_list(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 2 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k, _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         
+         let list = self.db.topk_list(key);
+         let mut resp = Vec::new();
+         for (item, count) in list {
+              resp.push(RespFrame::BulkString(Some(item)));
+         }
+         Ok(RespFrame::Array(Some(resp)))
+    }
+
+    async fn handle_tdigest_add(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k.to_string(), _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let val = match &frames[2] { RespFrame::BulkString(Some(s)) => s.parse::<f64>().unwrap_or(0.0), _ => return Ok(RespFrame::Error("ERR val".to_string())) };
+
+         self.db.tdigest_add(key, val);
+         Ok(RespFrame::SimpleString("OK".to_string()))
+    }
+
+    async fn handle_tdigest_quantile(&self, frames: &[RespFrame]) -> Result<RespFrame> {
+         if frames.len() != 3 { return Ok(RespFrame::Error("ERR args".to_string())); }
+         let key = match &frames[1] { RespFrame::BulkString(Some(k)) => k, _ => return Ok(RespFrame::Error("ERR key".to_string())) };
+         let q = match &frames[2] { RespFrame::BulkString(Some(s)) => s.parse::<f64>().unwrap_or(0.5), _ => 0.5 };
+         
+         let val = self.db.tdigest_quantile(key, q);
+         Ok(RespFrame::SimpleString(format!("{:.6}", val)))
     }
 }

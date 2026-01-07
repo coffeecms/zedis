@@ -29,7 +29,9 @@ impl Node {
     }
 }
 
-#[derive(Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ZSet {
     dict: HashMap<String, f64>,
     // For a real production "God Tier" ZSet, we would implement the SkipList manually 

@@ -5,4 +5,6 @@ pub mod allocator;
 pub mod vector;
 pub mod bloom; // New
 pub mod json;  // New
-pub mod embedder; // New
+pub mod embedder;
+pub mod probabilistic;
+ // New

@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 
+use serde::{Serialize, Deserialize};
+
 // --- Z-TIER: Tiered Storage ---
 pub struct TierManager {
     pub hot_threshold_hits: u64,
@@ -11,7 +13,7 @@ impl TierManager {
 }
 
 // --- Z-TIME: Time Series (Per Key) ---
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TimeSeries {
     // In a real Universe Tier, this would be a Gorilla-compressed blob
     samples: Vec<(u64, f64)>,
@@ -37,7 +39,7 @@ impl TimeSeries {
 use std::collections::VecDeque;
 use std::collections::HashSet;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Graph {
     // Adjacency List for THIS graph key
     adj: HashMap<String, Vec<String>>,
@@ -80,7 +82,7 @@ impl Graph {
 }
 
 // --- Z-ML: Model (Per Key) ---
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Model {
     pub name: String,
     // Stub: Model weights/bytes would be here

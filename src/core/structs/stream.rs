@@ -1,13 +1,15 @@
 use hashbrown::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamEntry {
     pub id: String, // "timestamp-sequence"
     pub fields: HashMap<String, String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Stream {
     entries: Vec<StreamEntry>,
     last_id: (u128, u64), // timestamp, sequence

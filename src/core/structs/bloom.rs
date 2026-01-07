@@ -1,9 +1,10 @@
 use bit_vec::BitVec;
+use serde::{Serialize, Deserialize};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 // Basic Bloom Filter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BloomFilter {
     bits: BitVec,
     k_hashes: u32,

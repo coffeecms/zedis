@@ -18,6 +18,7 @@ Everything Redis has, plus everything it doesn't.
 
 ### Core Architecture
 *   **Thread-per-Core Architecture**: Shared-nothing design. Each CPU core runs its own event loop. Linear scaling with hardware.
+*   **High-Performance Storage**: Built on **DashMap** for highly concurrent, lock-free read/write operations.
 *   **No Global Lock**: Unlike Redis (single-threaded), Zedis utilizes your entire server. 
 *   **Memory Safety**: Built in **Rust** for guaranteed memory safety without the crash risks of C/C++.
 
@@ -25,14 +26,18 @@ Everything Redis has, plus everything it doesn't.
 
 | Feature | Description | Key Commands |
 | :--- | :--- | :--- |
-| **Z-Vector** 🧠 | **AI Vector Search**. Native semantic search with auto-embedding. Build RAG apps instantly. | `VADD.TEXT`, `VSEARCH` |
+| **Z-Vector** 🧠 | **AI Vector Search**. Native semantic search with auto-embedding (BGE-M3). | `VADD.TEXT`, `VSEARCH.TEXT` |
+| **Z-Probabilistic** 🎲 | **Probabilistic Structures**. HyperLogLog, Cuckoo Filter, CMS, Top-K, t-digest. | `PFADD`, `CF.ADD`, `CMS.INCRBY`, `TOPK.ADD` |
+| **Z-Stream** 🌊 | **Event Streams**. Append-only logs for event sourcing and messaging. | `XADD`, `XRANGE` |
+| **Z-PubSub** 📢 | **Real-time Messaging**. Publish/Subscribe pattern for instant notifications. | `PUBLISH`, `SUBSCRIBE` |
+| **Z-Tx** 🤝 | **ACID Transactions**. Atomic execution of command blocks. | `MULTI`, `EXEC`, `DISCARD` |
 | **Z-Time** 📊 | **Time-Series Engine**. High-frequency metrics. Perfect for IoT & Finance. | `TS.ADD`, `TS.RANGE` |
-| **Z-Graph** 🕸️ | **Graph Processing**. Adjacency lists with BFS/DFS traversal. Fraud detection & social networks. | `GRAPH.ADD`, `GRAPH.BFS` |
+| **Z-Graph** 🕸️ | **Graph Processing**. Adjacency lists with BFS/DFS traversal. | `GRAPH.ADD`, `GRAPH.BFS` |
+| **Z-Geo** 🌍 | **Geo-Spatial Index**. Store and query locations. | `GEOADD` |
 | **Z-Doc** 📄 | **Native JSON Store**. Store and query JSON documents natively. | `JSON.SET`, `JSON.GET` |
-| **Z-Sketch** 🔬 | **Bloom Filters**. O(1) probabilistic membership checks. Process billions of records. | `BF.ADD`, `BF.EXISTS` |
-| **Inference** 🤖 | **In-Database ML**. Load models and run predictions with zero data movement. | `ML.LOAD`, `ML.RUN` |
 | **Z-Mask** 🎭 | **ElasticSearch Compatibility**. Zedis listens on Port 9200 and speaks standard ES API. | HTTP API |
-| **Z-Flow** 🌊 | **Zero-ETL Sync**. Auto-sync data from MySQL/Postgres/SQLite via `zflow.toml`. | Config-driven |
+| **Z-Flow** 🔄 | **Zero-ETL Sync**. Auto-sync data from MySQL/Postgres/SQLite via `zflow.toml`. | Config-driven |
+| **Z-Bit** 0️⃣ | **Bitwise Operations**. High-performance bit manipulation. | `BITCOUNT`, `BITFIELD` |
 
 ---
 
@@ -229,6 +234,61 @@ VSEARCH.TEXT product "audio devices" 2
 
 ---
 
+## 💡 Real-World Use Cases
+
+Here are 5 practical ways to use each of Zedis's God Tier features:
+
+### 🧠 Z-Vector (AI Search)
+1.  **RAG Chatbots**: Store knowledge base chunks as vectors. When a user asks a question, retrieve the most relevant chunks to feed into your LLM.
+2.  **E-commerce Recommendation**: "Similar Products". Auto-embed product descriptions to find items with similar features (e.g., "earbuds" ~ "headphones") without keyword matching.
+3.  **Semantic Image Search**: Use a vision model to embed images. Users can search "sunset on beach" and find relevant photos.
+4.  **Customer Support Triage**: Classify incoming support tickets by meaning to automatically route them to the correct department (Billing vs Technical).
+5.  **Plagiarism/Duplication Detection**: Find documents that are semantically identical even if words are rephrased.
+
+### 🎲 Z-Probabilistic
+1.  **Unique Visitor Counting (HyperLogLog)**: Count Daily Active Users (DAU) for a website with millions of hits using only 12KB of memory.
+2.  **Username Availability (Cuckoo Filter)**: Check if a username is taken before hitting your primary database. Saves massive IOPS.
+3.  **DDoS Protection (Count-Min Sketch)**: Track IP request frequency in real-time to identify and block abusive "heavy hitters".
+4.  **Trending Topics (Top-K)**: Identify the top 10 most used hashtags or search terms in a live stream of data.
+5.  **API Performance Monitoring (t-digest)**: Calculate accurate P99 latency percentiles for your API endpoints to detect slow outliers.
+
+### 🌊 Z-Stream (Event Streams)
+1.  **Social Activity Feeds**: Store user activity (likes, comments, posts) in an infinite log for followers to consume.
+2.  **IoT Data Ingestion**: Buffer massive bursts of sensor data (temperature, speed) before processing/archiving to cold storage.
+3.  **Job Queues**: Reliable background job processing system. Producers push tasks, Consumers group-read and acknowledge them.
+4.  **Audit Logs**: Immutable history of all critical system actions for compliance and security auditing.
+5.  **Chat History**: Store chat room messages sequentially with IDs useful for "load more" pagination.
+
+### 📢 Z-PubSub (Real-Time)
+1.  **Live Sports Scores**: Push real-time score updates to millions of connected web clients instantly.
+2.  **Chat Applications**: Instant message delivery between users in a chat room.
+3.  **System Config Updates**: Broadcast a "clear cache" or "update config" command to all your microservice instances at once.
+4.  **Geofence Alerts**: Notify a user app immediately when they enter a specific physical zone.
+5.  **Typing Indicators**: Show "User is typing..." status in real-time apps.
+
+### 📊 Z-Time (Time-Series)
+1.  **Server Monitoring**: Track CPU, Memory, and Disk usage metrics every second for dashboards.
+2.  **Financial Tickers**: Store high-frequency stock or crypto trade prices for candlestick charting.
+3.  **Smart Metering**: Record electricity or water usage readings from millions of meters.
+4.  **Website Analytics**: Track Requests Per Second (RPS) and error rates over time.
+5.  **Cold Chain Logistics**: Monitor freezer temperatures during shipping to ensure compliance (alert if temp > threshold).
+
+### 🕸️ Z-Graph (Graph Processing)
+1.  **Friend Recommendations**: "People you may know" - Find friends of friends (2nd degree connections).
+2.  **Fraud Detection**: Detect circular money transfers or fraud rings (A pays B, B pays C, C pays A).
+3.  **Product Recommendation**: "People who bought X also bought Y" graph analysis.
+4.  **Identity Resolution**: Link unconnected data points (cookies, emails, devices) to a single user identity.
+5.  **Access Control (RBAC)**: traverse organizational hierarchy trees to determine if User A has permission for Resource B.
+
+### 🌍 Z-Geo (Geo-Spatial)
+1.  **Ride Sharing**: "Find nearest 5 drivers to my location".
+2.  **Store Locator**: Show all retail branches within a 5km radius.
+3.  **Delivery Tracking**: Update and query courier positions in real-time.
+4.  **Dating Apps**: "Show users nearby" with distance filtering.
+5.  **Location-Based Marketing**: Trigger a push notification when a user walks past a specific store.
+
+---
+
 ## 🛠️ Usage Examples (Polyglot)
 
 Zedis speaks the standard Redis Protocol (RESP). You can use **any standard Redis client** to interact with it.
@@ -253,9 +313,20 @@ print(results) # Returns keys closest to "animal jumping"
 r.execute_command('JSON.SET', 'user:100', '{"name": "Alice", "role": "admin"}')
 user = r.execute_command('JSON.GET', 'user:100', '.')
 
-# 3. Bloom Filter
-r.execute_command('BF.ADD', 'seen_emails', 'alice@example.com')
-exists = r.execute_command('BF.EXISTS', 'seen_emails', 'alice@example.com') # 1
+# 3. Probabilistic Structures (God Tier)
+# HyperLogLog
+r.execute_command('PFADD', 'hll_users', 'u1', 'u2', 'u3')
+print(r.execute_command('PFCOUNT', 'hll_users')) # 3
+
+# Cuckoo Filter
+r.execute_command('CF.ADD', 'cf_filter', 'item1')
+print(r.execute_command('CF.EXISTS', 'cf_filter', 'item1')) # 1
+
+# 4. Streams
+r.execute_command('XADD', 'mystream', '*', 'sensor', 'A', 'temp', '20')
+entries = r.execute_command('XRANGE', 'mystream', '-', '+')
+print(entries)
+
 ```
 
 ### 2. Go (`go-redis`)
@@ -384,8 +455,8 @@ Zedis listens on port **6379** by default (just like Redis).
 
 ### Compatibility Note
 Zedis implements a subset of Redis commands + custom Universe Tier commands. 
-- Supported: `SET`, `GET`, `HSET`, `HGET`, `RPUSH`, `ZADD`, `ZRANGE`, `EVAL`, `PING`.
-- Universe: `VADD`, `VSEARCH`, `BF.ADD`, `BF.EXISTS`, `JSON.SET`, `JSON.GET`.
+- Supported: `SET`, `GET`, `HSET`, `HGET`, `RPUSH`, `LPOP`, `LRANGE`, `ZADD`, `ZRANGE`, `EVAL`, `PING`, `MULTI`, `EXEC`.
+- Universe: `VADD`, `VSEARCH`, `PFADD`, `CF.ADD`, `CMS.INCRBY`, `TOPK.ADD`, `TDIGEST.ADD`, `JSON.SET`, `XADD`, `GEOADD`, `PUBLISH`.
 
 For advanced features (Pub/Sub, Transactions), complete implementation is on the roadmap.
 

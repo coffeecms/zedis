@@ -1,6 +1,8 @@
 use std::fmt;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ZedisString {
     Inline(u8, [u8; 22]), // 1 byte len, 22 bytes data (fits in 24 bytes total with discriminant)
     Heap(String),

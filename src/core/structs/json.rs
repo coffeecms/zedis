@@ -1,6 +1,8 @@
 use serde_json::Value;
 
-#[derive(Debug, Clone)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonDoc {
     root: Value,
 }
